@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>HILIAMOR · Confirmación CateKids</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --navy:#1c2b4a;
+    --navy-deep:#12203a;
+    --red:#8c1f2b;
+    --red-deep:#6e161f;
+    --gold:#c79a3d;
+    --cream:#f6f1e6;
+    --line:#d9cfb8;
+    --ok:#2f6b3f;
+    --pending:#a6631b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Georgia', 'Iowan Old Style', serif;
+    background:var(--cream);
+    color:var(--navy-deep);
+  }
+  header{
+    background:linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color:var(--cream);
+    padding:22px 18px 20px;
+    border-bottom:4px solid var(--gold);
+  }
+  header h1{
+    margin:0;
+    font-size:1.4rem;
+    font-weight:600;
+    letter-spacing:.3px;
+  }
+  header p{
+    margin:4px 0 0;
+    font-family:-apple-system, system-ui, sans-serif;
+    font-size:.85rem;
+    color:#cdd6e6;
+  }
+  main{max-width:980px; margin:0 auto; padding:16px;}
+
+  .toolbar{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    margin-bottom:16px;
+    font-family:-apple-system, system-ui, sans-serif;
+  }
+  .toolbar label{font-size:.8rem; color:var(--navy-deep); display:flex; flex-direction:column; gap:3px;}
+  .toolbar input[type=date]{
+    font-family:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:4px; background:#fff;
+  }
+  .btn{
+    font-family:-apple-system, system-ui, sans-serif;
+    border:none; border-radius:4px; padding:10px 16px; font-size:.9rem; font-weight:600;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary{background:var(--red); color:#fff;}
+  .btn-primary:active{background:var(--red-deep);}
+  .btn-ghost{background:transparent; color:var(--navy); border:1px solid var(--navy);}
+
+  .status-banner{
+    font-family:-apple-system, system-ui, sans-serif;
+    font-size:.8rem; padding:8px 12px; border-radius:4px; margin-bottom:14px; display:none;
+  }
+  .status-banner.show{display:block;}
+  .status-ok{background:#e4efe6; color:var(--ok); border:1px solid var(--ok);}
+  .status-err{background:#f5e2df; color:var(--red-deep); border:1px solid var(--red-deep);}
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:6px; overflow:hidden;
+  }
+  table{width:100%; border-collapse:collapse; font-family:-apple-system, system-ui, sans-serif;}
+  thead th{
+    background:var(--navy); color:var(--cream); text-align:left; padding:10px 8px;
+    font-size:.72rem; font-weight:600; position:sticky; top:0;
+  }
+  tbody td{
+    padding:9px 8px; border-bottom:1px solid var(--line); font-size:.83rem; vertical-align:middle;
+  }
+  tbody tr:nth-child(even){background:#faf7ef;}
+  .alumno-nombre{font-weight:700; color:var(--navy-deep);}
+  .alumno-sub{font-size:.72rem; color:#6b6252;}
+
+  td[contenteditable=true]{
+    cursor:text; border-radius:3px;
+  }
+  td[contenteditable=true]:focus{
+    outline:2px solid var(--gold); background:#fffbea;
+  }
+  td.saving{background:#fff4d6;}
+  td.saved{animation:flashOk 900ms ease;}
+  @keyframes flashOk{ 0%{background:#dcf0e0;} 100%{background:transparent;} }
+
+  .pago-badge{
+    display:inline-block; padding:2px 8px; border-radius:10px; font-size:.68rem; font-weight:700;
+    font-family:-apple-system, system-ui, sans-serif;
+  }
+  .pago-total{background:#dcf0e0; color:var(--ok);}
+  .pago-hermano, .pago-parcial{background:#f6e6cf; color:var(--pending);}
+  .pago-pendiente{background:#f3d9d7; color:var(--red-deep);}
+
+  .doc-link{
+    font-family:-apple-system, system-ui, sans-serif; font-size:.72rem;
+    color:var(--red); text-decoration:none; border:1px solid var(--red); border-radius:3px;
+    padding:3px 7px; white-space:nowrap;
+  }
+  .doc-missing{color:#9a917d; font-size:.72rem; font-family:-apple-system, system-ui, sans-serif;}
+
+  .asistencia-cell{text-align:center;}
+  .asis-toggle{
+    width:30px; height:30px; border-radius:50%; border:1.5px solid var(--line); background:#fff;
+    font-size:.9rem; cursor:pointer; color:var(--ok); font-weight:700;
+  }
+  .asis-toggle.present{background:var(--ok); border-color:var(--ok); color:#fff;}
+
+  /* Escáner modal */
+  .scan-overlay{
+    position:fixed; inset:0; background:rgba(18,32,58,.92); display:none;
+    align-items:center; justify-content:center; z-index:50; flex-direction:column; padding:16px;
+  }
+  .scan-overlay.show{display:flex;}
+  .scan-box{
+    background:#fff; border-radius:8px; padding:16px; max-width:420px; width:100%;
+    font-family:-apple-system, system-ui, sans-serif;
+  }
+  .scan-box h2{margin:0 0 10px; font-size:1rem; color:var(--navy-deep); font-family:Georgia, serif;}
+  #qr-reader{border-radius:6px; overflow:hidden;}
+  .scan-result{
+    margin-top:10px; padding:10px; border-radius:5px; font-size:.85rem; display:none;
+  }
+  .scan-result.show{display:block;}
+  .scan-log{max-height:120px; overflow-y:auto; margin-top:10px; font-size:.78rem;}
+  .scan-log div{padding:4px 0; border-bottom:1px dashed var(--line);}
+  .scan-close{margin-top:12px; width:100%;}
+
+  footer{
+    text-align:center; padding:24px 16px 40px; font-family:-apple-system, system-ui, sans-serif;
+    font-size:.72rem; color:#9a917d;
+  }
+
+  @media (max-width:640px){
+    .card{overflow-x:auto;}
+    table{min-width:900px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Confirmación · Grupo HILIAMOR</h1>
+  <p>SÁBADO 10:00 AM — Santa María de Guadalupe</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <label>Fecha de asistencia
+      <input type="date" id="fechaAsistencia">
+    </label>
+    <button class="btn btn-primary" id="btnEscanear">📷 Escanear asistencia</button>
+    <button class="btn btn-ghost" id="btnRecargar">Recargar datos</button>
+  </div>
+
+  <div class="status-banner" id="statusBanner"></div>
+
+  <div class="card">
+    <table id="tablaAlumnos">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Alumno</th>
+          <th>Tutor</th>
+          <th>WhatsApp</th>
+          <th>Pago</th>
+          <th>Acta</th>
+          <th>Boleta</th>
+          <th>Observaciones</th>
+          <th>Asistencia hoy</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyAlumnos">
+        <tr><td colspan="9" style="padding:24px; text-align:center; font-family:-apple-system, system-ui, sans-serif; color:#9a917d;">Cargando datos de HILIAMOR…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<footer>Panel de solo esta catequista · Los cambios se guardan directo en el Sheet · CateKids Buena Vista, El Carmen, Nuevo León</footer>
+
+<!-- Escáner QR -->
+<div class="scan-overlay" id="scanOverlay">
+  <div class="scan-box">
+    <h2>Escanear tarjeta QR del alumno</h2>
+    <div id="qr-reader"></div>
+    <div class="scan-result" id="scanResult"></div>
+    <div class="scan-log" id="scanLog"></div>
+    <button class="btn btn-ghost scan-close" id="btnCerrarScan">Cerrar</button>
+  </div>
+</div>
+
+<script>
+// ============ CONFIGURACIÓN ============
+// Pega aquí la URL /exec que te da Apps Script al implementar como Aplicación Web
+const APPS_SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT/exec';
+// ========================================
+
+let alumnosData = [];
+let html5QrCode = null;
+
+function hoyISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function isoToDDMMYYYY(iso){
+  const [y,m,d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
+
+document.getElementById('fechaAsistencia').value = hoyISO();
+
+function jsonp(params){
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const script = document.createElement('script');
+    let finished = false;
+
+    window[cbName] = function(response){
+      finished = true;
+      cleanup();
+      if (response && response.ok) resolve(response.data);
+      else reject(new Error((response && response.error) || 'Error desconocido'));
+    };
+    function cleanup(){
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    const qs = new URLSearchParams({...params, callback: cbName}).toString();
+    script.src = APPS_SCRIPT_URL + '?' + qs;
+    script.onerror = () => { if(!finished){ cleanup(); reject(new Error('No se pudo contactar al servidor')); } };
+    document.body.appendChild(script);
+  });
+}
+
+function showStatus(msg, ok){
+  const el = document.getElementById('statusBanner');
+  el.textContent = msg;
+  el.className = 'status-banner show ' + (ok ? 'status-ok' : 'status-err');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function pagoBadgeClass(status){
+  if(!status) return 'pago-pendiente';
+  const s = status.toUpperCase();
+  if (s.includes('TOTAL')) return 'pago-total';
+  if (s.includes('PARCIAL')) return 'pago-parcial';
+  if (s.includes('HERMANO')) return 'pago-hermano';
+  return 'pago-pendiente';
+}
+
+function docCell(url, label){
+  if (url) return `<a class="doc-link" href="${url}" target="_blank" rel="noopener">Ver ${label}</a>`;
+  return `<span class="doc-missing">— sin ${label.toLowerCase()}</span>`;
+}
+
+function renderTabla(){
+  const tbody = document.getElementById('tbodyAlumnos');
+  const fechaISO = document.getElementById('fechaAsistencia').value;
+  const fechaKey = isoToDDMMYYYY(fechaISO);
+
+  if (!alumnosData.length){
+    tbody.innerHTML = `<tr><td colspan="9" style="padding:24px; text-align:center; font-family:-apple-system, system-ui, sans-serif; color:#9a917d;">No hay alumnos registrados en HILIAMOR.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = alumnosData.map(a => {
+    const presente = (a.asistencias[fechaKey] || '').trim() !== '';
+    return `
+    <tr data-row="${a.row}">
+      <td>${a.no ?? ''}</td>
+      <td>
+        <div class="alumno-nombre">${a.nombre} ${a.paterno} ${a.materno}</div>
+        <div class="alumno-sub">${a.fechaNac || ''} · ${a.sexo || ''}</div>
+      </td>
+      <td contenteditable="true" data-col="TUTOR">${a.tutor || ''}</td>
+      <td contenteditable="true" data-col="WHATSAPP">${a.whatsapp || ''}</td>
+      <td>
+        <span class="pago-badge ${pagoBadgeClass(a.statusPago)}">${a.statusPago || 'SIN STATUS'}</span><br>
+        <span contenteditable="true" data-col="PAGO" style="font-size:.75rem;">${a.pago || ''}</span>
+      </td>
+      <td>${docCell(a.actaUrl, 'Acta')}</td>
+      <td>${docCell(a.boletaUrl, 'Boleta')}</td>
+      <td contenteditable="true" data-col="OBS">${a.obs || ''}</td>
+      <td class="asistencia-cell">
+        <button class="asis-toggle ${presente ? 'present' : ''}" data-row="${a.row}">${presente ? '✓' : ''}</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Guardar ediciones manuales al salir del campo
+  tbody.querySelectorAll('td[contenteditable=true]').forEach(td => {
+    td.addEventListener('blur', onCellEdit);
+  });
+  // Toggle de asistencia manual
+  tbody.querySelectorAll('.asis-toggle').forEach(btn => {
+    btn.addEventListener('click', onToggleAsistencia);
+  });
+}
+
+async function onCellEdit(e){
+  const td = e.target;
+  const row = td.closest('tr').dataset.row;
+  const col = td.dataset.col;
+  const value = td.textContent.trim();
+  td.classList.add('saving');
+  try {
+    await jsonp({ action: 'updateCell', row, col, value });
+    td.classList.remove('saving');
+    td.classList.add('saved');
+    setTimeout(() => td.classList.remove('saved'), 900);
+  } catch(err){
+    td.classList.remove('saving');
+    showStatus('No se guardó el cambio: ' + err.message, false);
+  }
+}
+
+async function onToggleAsistencia(e){
+  const btn = e.target;
+  const row = btn.dataset.row;
+  const fechaISO = document.getElementById('fechaAsistencia').value;
+  const fecha = isoToDDMMYYYY(fechaISO);
+  const presente = !btn.classList.contains('present');
+  btn.disabled = true;
+  try {
+    await jsonp({ action: 'markAttendance', row, fecha, presente });
+    btn.classList.toggle('present', presente);
+    btn.textContent = presente ? '✓' : '';
+    const alumno = alumnosData.find(a => String(a.row) === String(row));
+    if (alumno) alumno.asistencias[fecha] = presente ? 'x' : '';
+  } catch(err){
+    showStatus('No se pudo actualizar la asistencia: ' + err.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function cargarDatos(){
+  try {
+    const data = await jsonp({ action: 'getData' });
+    alumnosData = data.students || [];
+    renderTabla();
+  } catch(err){
+    document.getElementById('tbodyAlumnos').innerHTML =
+      `<tr><td colspan="9" style="padding:24px; text-align:center; color:var(--red-deep); font-family:-apple-system, system-ui, sans-serif;">Error al cargar: ${err.message}<br><small>Revisa que APPS_SCRIPT_URL esté configurada.</small></td></tr>`;
+  }
+}
+
+document.getElementById('btnRecargar').addEventListener('click', cargarDatos);
+document.getElementById('fechaAsistencia').addEventListener('change', renderTabla);
+
+// ============ ESCÁNER QR ============
+const scanOverlay = document.getElementById('scanOverlay');
+const scanResult = document.getElementById('scanResult');
+const scanLog = document.getElementById('scanLog');
+
+document.getElementById('btnEscanear').addEventListener('click', abrirScanner);
+document.getElementById('btnCerrarScan').addEventListener('click', cerrarScanner);
+
+function abrirScanner(){
+  scanOverlay.classList.add('show');
+  scanResult.classList.remove('show');
+  scanLog.innerHTML = '';
+  html5QrCode = new Html5Qrcode('qr-reader');
+  html5QrCode.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 240, height: 240 } },
+    onScanSuccess,
+    () => {} // errores de frame, se ignoran
+  ).catch(err => {
+    scanResult.className = 'scan-result show';
+    scanResult.style.background = '#f5e2df';
+    scanResult.style.color = 'var(--red-deep)';
+    scanResult.textContent = 'No se pudo activar la cámara: ' + err;
+  });
+}
+
+function cerrarScanner(){
+  if (html5QrCode){
+    html5QrCode.stop().then(() => html5QrCode.clear()).catch(()=>{});
+  }
+  scanOverlay.classList.remove('show');
+}
+
+let scanBusy = false;
+async function onScanSuccess(decodedText){
+  if (scanBusy) return;
+  scanBusy = true;
+  const fechaISO = document.getElementById('fechaAsistencia').value;
+  const fecha = isoToDDMMYYYY(fechaISO);
+  try {
+    const res = await jsonp({ action: 'scanAttendance', codigo: decodedText, fecha });
+    scanResult.className = 'scan-result show';
+    scanResult.style.background = '#e4efe6';
+    scanResult.style.color = 'var(--ok)';
+    scanResult.textContent = '✓ Asistencia registrada: ' + res.nombreCompleto;
+    scanLog.insertAdjacentHTML('afterbegin', `<div>${res.stamp} — ${res.nombreCompleto}</div>`);
+
+    const alumno = alumnosData.find(a => String(a.row) === String(res.row));
+    if (alumno) alumno.asistencias[fecha] = res.stamp;
+    renderTabla();
+  } catch(err){
+    scanResult.className = 'scan-result show';
+    scanResult.style.background = '#f5e2df';
+    scanResult.style.color = 'var(--red-deep)';
+    scanResult.textContent = '⚠ ' + err.message;
+  } finally {
+    setTimeout(() => { scanBusy = false; }, 1500); // evita doble lectura del mismo código
+  }
+}
+
+// Carga inicial
+cargarDatos();
+</script>
+</body>
+</html>
